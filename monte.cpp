@@ -27,9 +27,11 @@ int IntegralScore[19]={40,320,640,1280,2560,3840,5120,6400,7680,8960,10240,11520
 int PatternCol[22]={0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5};
 int PatternDir[22]={0,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2};
 bool visited[MAXR][MAXC];
-int dr[4]={0,0,1,-1};
-int dc[4]={1,-1,0,0};
+bool memo[MAXR][MAXC];
+int dr[4]={1,0,-1,0};
+int dc[4]={0,-1,0,1};
 ofstream ofs("monte.out");
+
 inline bool validfield(int r,int c){
   return 0<=r && r<MAXR-1 && 0<=c && c<MAXC;
 }
@@ -46,7 +48,10 @@ int CntConnect(int r,int c){
   }
   return ret;
 }
-
+void PrintMap(vector<string> &tmap){
+  REP(r,MAXR) cout<<MAP[MAXR-r-1]<<endl;
+  cout<<endl;
+}
 void DisplayMap(int tumon){
   if(tumon+2 < (int)TUMO.size())printf("%s %s\n",TUMO[tumon+1].c_str(),TUMO[tumon+2].c_str());
   else if(tumon+1 < (int)TUMO.size())printf("%s XX\n",TUMO[tumon+1].c_str());
@@ -92,7 +97,8 @@ int GetScore(bool displayVal,int tumon){
     REP(r,MAXR-1){
       REP(c,MAXC){
 	if(MAP[r][c]=='.') continue;
-	memset(visited,false,sizeof(visited));
+	if(memo[r][c]) continue;
+	 memset(visited,false,sizeof(visited));
 	int t=CntConnect(r,c);
 	if(t>=4){
 	  color.insert(MAP[r][c]);
@@ -178,9 +184,8 @@ pair<int,vector<int> > SimulatedAnnealing(vector<string> &initmap,vector<string>
   }
   return pair<int,vector<int> >(curscore,curmove);
 }
+
 int Simulated(vector<int> &move,vector<string> &initmap,vector<string> &tumo,bool displayflag){
-  int dr[4]={1,0,-1,0};
-  int dc[4]={0,-1,0,1};
   MAP = initmap;
   int score = 0;
   REP(i,tumo.size()){
@@ -216,23 +221,46 @@ vector<int> CreateRandMove(int n){
 }
 
 int MCmethod(vector<string> &initmap,int m,int n,string cur,string next,double alpha){
-  vector<string> nextmaps[22];
+  vector<vector<string> > nextmaps;
+  vector<int> moveidx;
   int cnts[22];
   double expscore[22];
   REP(i,22){
-    nextmaps[i] = initmap;
+    vector<string> tmpmap = initmap;
     int cc=PatternCol[i];
     int cr=MAXR+1;
-    nextmaps[i][cr][cc]=cur[0];
-    nextmaps[i][cr+dr[PatternDir[i]]][cc+dc[PatternDir[i]]] = cur[1];
-    Drop(nextmaps[i]);
+    tmpmap[cr][cc]=cur[0];
+    tmpmap[cr+dr[PatternDir[i]]][cc+dc[PatternDir[i]]] = cur[1];
+    Drop(tmpmap);
+    MAP = tmpmap;
+    PrintMap(MAP);
+    int score = GetScore(false,i);
+    cout<<"pattern:"<<i<<endl;
+    PrintMap(MAP);
+    cout<<score<<" "<<endl;
+    if(score==0) nextmaps.push_back(tmpmap),moveidx.push_back(i); 
+  }
+  cout<<endl;
+  if(nextmaps.size()==0){
+    REP(i,22){
+      vector<string> tmpmap = initmap;
+      int cc=PatternCol[i];
+      int cr=MAXR+1;
+      tmpmap[cr][cc]=cur[0];
+      tmpmap[cr+dr[PatternDir[i]]][cc+dc[PatternDir[i]]] = cur[1];
+      Drop(tmpmap);
+      MAP = tmpmap;
+      nextmaps.push_back(tmpmap);
+      moveidx.push_back(i); 
+    }
   }
   memset(cnts,0,sizeof(cnts));
   memset(expscore,0,sizeof(expscore));
+  cout<<nextmaps.size()<<endl;
   REP(i,m){
     int maxj = 0;
     double maxval=0;
-    REP(j,22){
+    REP(j,moveidx.size()){
       if(cnts[j]>0){
 	double ucb = expscore[j]+alpha*sqrt(log(i)/cnts[j]);
 	//printf("%.4f ",ucb);
@@ -259,24 +287,21 @@ int MCmethod(vector<string> &initmap,int m,int n,string cur,string next,double a
   }
   int ret = 0;
   double maxval = 0;
-  REP(i,22){
+  REP(i,moveidx.size()){
     if(cnts[i]>0){
       double ucb = expscore[i]+alpha*sqrt(log(m)/cnts[i]);
       cout<<ucb<<" ";
       if(maxval<ucb){
 	maxval = ucb;
-	ret = i;
+	ret = moveidx[i];
       }
-    }
-    else{
-      ret = i;
-      break;
     }
   }
   cout<<endl;
   cout<<"selected:"<<ret<<endl;
   return ret;
 }
+
 int main()
 {
   int n;
@@ -297,26 +322,39 @@ int main()
   vector<string> tmpmap = initmap;
   vector<int> bestmove;
   REP(i,n-1){
-    int move =  MCmethod(tmpmap,100,n-i,TUMO[i],TUMO[i+1],1.3);
+    cout<<i<<"'s move"<<endl;
+    int move =  MCmethod(tmpmap,400,n-i,TUMO[i],TUMO[i+1],1.3);
     bestmove.push_back(move);
-    int cc=PatternCol[i];
+    int cc=PatternCol[move];
     int cr=MAXR+1;
     tmpmap[cr][cc]=TUMO[i][0];
-    tmpmap[cr+dr[PatternDir[i]]][cc+dc[PatternDir[i]]] = TUMO[i][1];
+    tmpmap[cr+dr[PatternDir[move]]][cc+dc[PatternDir[move]]] = TUMO[i][1];
     Drop(tmpmap);
+    MAP = tmpmap;
+    GetScore(false,i);
+    tmpmap = MAP;
   }
   int maxval = 0;
   int maxi = 0;
   REP(i,22){
     vector<int> move(1,i);
     vector<string> tumo(1,TUMO[n-1]);
+    PrintMap(tmpmap);
     int score = Simulated(move,tmpmap,tumo,false);
-    if(score < maxval){
+    PrintMap(MAP);
+    cout<<score<<endl;
+    if(score > maxval){
       maxi = i;
       maxval = score;
     }
   }
   bestmove.push_back(maxi);
+  REP(i,bestmove.size()){
+    cout<<bestmove[i]<<" ";
+  }
+  cout<<endl;
+  MAP = initmap;
+  DisplayMap(-1);
   Simulated(bestmove,initmap,TUMO,true);
   return 0;
 }
