@@ -13,7 +13,7 @@ class PuyoFieldMaker:
         curw=0
         curh=0
         idx =0
-        while idx<=4:
+        while idx<=5:
             tmp=[]
             curh=0
             while curh<self.puyoimg.size[1]:
@@ -25,7 +25,7 @@ class PuyoFieldMaker:
             idx+=1
             curw+=w
         #trans init
-        self.colortoint={"R":0,"B":1,"Y":2,"G":3,"P":4}
+        self.colortoint={"R":0,"B":1,"Y":2,"G":3,"P":4,"O":5}
         #up right down left
         #1,2,4,8
         self.dxy=[[0,-1],[1,0],[0,1],[-1,0]]
@@ -55,7 +55,7 @@ class PuyoFieldMaker:
             curw=w
             x=0
             while x<len(fielddata[0]):
-                if fielddata[y][x]!='.' :
+                if fielddata[y][x]!='.'  and fielddata[y][x]!='O':
                     colidx = self.colortoint[fielddata[y][x]]
                     conidx = 0
                     t = 0
@@ -66,6 +66,10 @@ class PuyoFieldMaker:
                             if fielddata[y][x] == fielddata[ny][nx] :
                                 conidx += self.dconidx[t]
                         t+=1
+                    tmp.paste(self.colorpuyo[colidx][self.connectpattern[conidx]],(curw,curh),self.colorpuyo[colidx][self.connectpattern[conidx]])
+                if fielddata[y][x] == 'O':
+                    colidx = self.colortoint[fielddata[y][x]]
+                    conidx = 0
                     tmp.paste(self.colorpuyo[colidx][self.connectpattern[conidx]],(curw,curh),self.colorpuyo[colidx][self.connectpattern[conidx]])
                 curw+=w
                 x+=1

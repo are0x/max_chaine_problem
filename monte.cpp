@@ -48,10 +48,12 @@ int CntConnect(int r,int c){
   }
   return ret;
 }
+
 void PrintMap(vector<string> &tmap){
   REP(r,MAXR) cout<<MAP[MAXR-r-1]<<endl;
   cout<<endl;
 }
+
 void DisplayMap(int tumon){
   if(tumon+2 < (int)TUMO.size())printf("%s %s\n",TUMO[tumon+1].c_str(),TUMO[tumon+2].c_str());
   else if(tumon+1 < (int)TUMO.size())printf("%s XX\n",TUMO[tumon+1].c_str());
@@ -96,15 +98,23 @@ int GetScore(bool displayVal,int tumon){
     set<char> color;
     REP(r,MAXR-1){
       REP(c,MAXC){
-	if(MAP[r][c]=='.') continue;
-	if(memo[r][c]) continue;
-	 memset(visited,false,sizeof(visited));
+	if(MAP[r][c]=='.' || MAP[r][c] == 'O') continue;
+	memset(visited,false,sizeof(visited));
 	int t=CntConnect(r,c);
 	if(t>=4){
 	  color.insert(MAP[r][c]);
 	  REP(tr,MAXR){
 	    REP(tc,MAXC){
-	      if(visited[tr][tc]) MAP[tr][tc]='.';
+	      if(visited[tr][tc]) {
+		MAP[tr][tc]='.';
+		REP(i,4){
+		  int nr=tr+dr[i];
+		  int nc=tc+dc[i];
+		  if(validfield(nr,nc) && MAP[nr][nc]=='O'){
+		    MAP[nr][nc]='.';
+		  }
+		}
+	      }
 	    }
 	  }
 	  sumconnect += t;
@@ -233,7 +243,6 @@ int MCmethod(vector<string> &initmap,int m,int n,string cur,string next,double a
     tmpmap[cr+dr[PatternDir[i]]][cc+dc[PatternDir[i]]] = cur[1];
     Drop(tmpmap);
     MAP = tmpmap;
-    PrintMap(MAP);
     int score = GetScore(false,i);
     cout<<"pattern:"<<i<<endl;
     PrintMap(MAP);
@@ -256,7 +265,6 @@ int MCmethod(vector<string> &initmap,int m,int n,string cur,string next,double a
   }
   memset(cnts,0,sizeof(cnts));
   memset(expscore,0,sizeof(expscore));
-  cout<<nextmaps.size()<<endl;
   REP(i,m){
     int maxj = 0;
     double maxval=0;
@@ -290,7 +298,7 @@ int MCmethod(vector<string> &initmap,int m,int n,string cur,string next,double a
   REP(i,moveidx.size()){
     if(cnts[i]>0){
       double ucb = expscore[i]+alpha*sqrt(log(m)/cnts[i]);
-      cout<<ucb<<" ";
+      cout<<"pattern:"<<moveidx[i]<<" "<<ucb<<endl;
       if(maxval<ucb){
 	maxval = ucb;
 	ret = moveidx[i];
